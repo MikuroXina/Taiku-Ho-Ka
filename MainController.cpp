@@ -69,7 +69,7 @@ MainController::MainController() {
 		throw -1;
 	}
 
-	data->renderer = SDL_CreateRenderer(data->window, -1, SDL_RENDERER_ACCELERATED);
+	data->renderer = SDL_CreateRenderer(data->window, -1, SDL_RENDERER_PRESENTVSYNC);
 
 	// Setup texture
 	data->playerTex = IMG_Load("Player.png");
@@ -100,11 +100,21 @@ MainController::~MainController() {
 	TTF_Quit();
 	SDL_Quit();
 
+	for (auto const& obj : data->enemyPool) {
+		delete obj;
+	}
+	for (auto const& obj : data->bulletPool) {
+		delete obj;
+	}
+
 	delete data;
 }
 
 void MainController::init() {
 	for (auto const& obj : data->enemyPool) {
+		delete obj;
+	}
+	for (auto const& obj : data->bulletPool) {
 		delete obj;
 	}
 
@@ -123,14 +133,19 @@ void MainController::init() {
 void MainController::update() {
 	for (auto const& bullet : data->bulletPool) {
 		bullet->update();
+		if ((1 > bullet->body.posX || bullet->body.posX > 801) ||
+	(1 > bullet->body.posY)) {
+			delete bullet;
+			data->bulletPool.erase(std::remove(data->bulletPool.begin(), data->bulletPool.end(), bullet), data->bulletPool.end());
+		}
 	}
 
 	for (auto& enemy: data->enemyPool) {
 		enemy->update();
 		for (auto const& bullet : data->bulletPool) {
 			if (enemy->body.isCollision(bullet->body)) {
+				explosion(enemy->body);
 				delete enemy;
-				// Animate explosion
 			}
 		}
 	}
@@ -142,7 +157,8 @@ int MainController::run() {
 	updateDisplay();
 	do {
 		inputter.update();
-		this->update();
+		update();
+		updateDisplay();
 	} while (!(data->quit));
 
 	return data->fail ? 0 : 1;
@@ -188,17 +204,25 @@ void MainController::updateDisplay() {
 	// Draw player
 	{
 		SDL_Rect playerRect;
-
+		playerRect.x = 300;
+		playerRect.y = 400;
+		playerRect.w = 200;
+		playerRect.h = 200;
+		SDL_Point playerCenter;
+		playerCenter.x = 100;
+		playerCenter.y = 120;
 		SDL_Texture *playerTexBuf = SDL_CreateTextureFromSurface(data->renderer, data->playerTex);
+
+		SDL_RenderCopyEx(data->renderer, playerTexBuf, NULL, &playerRect, -data->rotation, &playerCenter, SDL_FLIP_NONE);
 
 		SDL_DestroyTexture(playerTexBuf);
 	}
 
 	// Draw enemies
 	{
-		SDL_Texture *enemy1TexBuf = SDL_CreateTextureFromSurface(data->renderer, data->enemy1Tex);
-		SDL_Texture *enemy2TexBuf = SDL_CreateTextureFromSurface(data->renderer, data->enemy2Tex);
-		SDL_Texture *enemy3TexBuf = SDL_CreateTextureFromSurface(data->renderer, data->enemy3Tex);
+		//SDL_Texture *enemy1TexBuf = SDL_CreateTextureFromSurface(data->renderer, data->enemy1Tex);
+		//SDL_Texture *enemy2TexBuf = SDL_CreateTextureFromSurface(data->renderer, data->enemy2Tex);
+		//SDL_Texture *enemy3TexBuf = SDL_CreateTextureFromSurface(data->renderer, data->enemy3Tex);
 		for (auto const& enemy : data->enemyPool) {
 			switch (enemy->type) {
 			case Enemy::Type::helicopter:
@@ -215,9 +239,14 @@ void MainController::updateDisplay() {
 
 	// Draw bullets
 	{
-		SDL_SetRenderDrawColor(data->renderer, 66, 244, 92, 255);
+		SDL_SetRenderDrawColor(data->renderer, 238, 244, 66, 255);
 		for (auto const& bullet : data->bulletPool) {
-
+			SDL_Rect bulletRect;
+			bulletRect.x = bullet->body.posX;
+			bulletRect.y = bullet->body.posY;
+			bulletRect.w = 8;
+			bulletRect.h = 8;
+			SDL_RenderDrawRect(data->renderer, &bulletRect);
 		}
 	}
 
@@ -246,13 +275,27 @@ void MainController::updateDisplay() {
 }
 
 void MainController::rotateLeft() {
-
+	if (data->rotation <= 50) {
+		data->rotation += 4;
+	}
 }
 
 void MainController::rotateRight() {
-
+	if (data->rotation >= -50) {
+		data->rotation -= 4;
+	}
 }
 
 void MainController::shoot() {
+	static constexpr double pi = 3.141592653589793;
+	auto shot = new MyBullet();
+	shot->body.posX = 400;
+	shot->body.posY = 520;
+	shot->rotate = -(90 + data->rotation) * M_PI / 180.0;
+	shot->speed = 0.1;
+	data->bulletPool.push_back(shot);
+}
+
+void MainController::explosion(struct Ridgebody const& body) {
 
 }

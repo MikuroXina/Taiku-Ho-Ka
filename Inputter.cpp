@@ -7,6 +7,9 @@
 void Inputter::update() {
 	while (SDL_PollEvent(&event) != 0) {
 		if (controller->getData()->quit) return;
+		if (event.type == SDL_QUIT) {
+			controller->quit();
+		}
 		if (event.type == SDL_KEYDOWN) {
 			switch (event.key.keysym.sym) {
 			case SDLK_ESCAPE:

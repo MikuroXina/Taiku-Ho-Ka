@@ -29,7 +29,7 @@ public:
 	// Other events
 	void quit();
 	void fail();
-	void explosion(int, int);
+	void explosion(struct Ridgebody const&);
 	void updateDisplay();
 
 	Data const* getData() const { return data; }

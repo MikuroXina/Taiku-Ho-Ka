@@ -34,7 +34,7 @@ public:
 };
 
 struct Ridgebody {
-	int posX = 0, posY = 0;
+	double posX = 0, posY = 0;
 	int collisionRadius = 1;
 	bool isCollision(Ridgebody const& a) const {
 		return (std::sqrt(posX * posX + posY * posY) - std::sqrt(a.posX * a.posX + a.posY * a.posY)) <= 1;
@@ -61,22 +61,23 @@ public:
 struct Bullet {
 	Ridgebody body;
 	virtual void update() = 0;
+	virtual ~Bullet() = default;
 };
 
 struct MyBullet : Bullet {
-private:
-	double rotate = .0;
-	double speed = .0;
 public:
-	int collisionRadius = 1;
+	double rotate = 0;
+	double speed = 0;
 	void update() override {
-		Bullet::body.posX = std::cos(rotate) * speed;
-		Bullet::body.posY = std::sin(rotate) * speed;
+		Bullet::body.posX += (std::cos(rotate) * 180.0 / M_PI) * speed;
+		Bullet::body.posY += (std::sin(rotate) * 180.0 / M_PI) * speed;
 	}
+	virtual ~MyBullet() = default;
 };
 
 struct EnemyBullet : Bullet {
 	void update() override {
 		Bullet::body.posX -= 2;
 	}
+	virtual ~EnemyBullet() = default;
 };
