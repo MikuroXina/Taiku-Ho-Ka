@@ -72,10 +72,12 @@ MainController::MainController() {
 	data->renderer = SDL_CreateRenderer(data->window, -1, SDL_RENDERER_PRESENTVSYNC);
 
 	// Setup texture
-	data->playerTex = IMG_Load("Player.png");
-	data->enemy1Tex = IMG_Load("Enemy1.png");
-	data->enemy2Tex = IMG_Load("Enemy2.png");
-	data->enemy3Tex = IMG_Load("Enemy3.png");
+	data->playerTex[0] = IMG_Load("Player.png");
+	data->playerTex[1] = IMG_Load("Player1.png");
+	data->playerTex[2] = IMG_Load("Player2.png");
+	data->enemy1Tex = IMG_Load("helicopter.png");
+	data->enemy2Tex = IMG_Load("bomber.png");
+	data->enemy3Tex = IMG_Load("ufo.png");
 	for (int i = 0; i < 11; i+=1) {
 		data->explodeTex[i] = IMG_Load(("explode" + std::to_string(i) + ".png").c_str());
 	}
@@ -88,7 +90,9 @@ MainController::MainController() {
 }
 
 MainController::~MainController() {
-	SDL_FreeSurface(data->playerTex);
+	SDL_FreeSurface(data->playerTex[0]);
+	SDL_FreeSurface(data->playerTex[1]);
+	SDL_FreeSurface(data->playerTex[2]);
 	SDL_FreeSurface(data->enemy1Tex);
 	SDL_FreeSurface(data->enemy2Tex);
 	SDL_FreeSurface(data->enemy3Tex);
@@ -119,7 +123,7 @@ MainController::~MainController() {
 	delete data;
 }
 
-void MainController::init() {
+void MainController::init(unsigned int highscore) {
 	for (auto const& obj : data->enemyPool) {
 		delete obj;
 	}
@@ -132,11 +136,16 @@ void MainController::init() {
 
 	data->quit = false;
 	data->fail = false;
+	data->lastShootTime = std::chrono::system_clock::now();
+	data->lastSpawnTime = std::chrono::system_clock::now();
+	data->enemySpawnInterval = 5000;
 	data->rotation = 0.0;
 	data->enemyPool = std::vector<struct Enemy*>();
 	data->bulletPool = std::vector<struct Bullet*>();
 	data->explodePool = std::vector<struct Explode*>();
 	data->score = 0;
+	data->highscore = highscore;
+	data->lives = 3;
 
 	// Delete events
 	SDL_PumpEvents();
@@ -145,13 +154,47 @@ void MainController::init() {
 }
 
 void MainController::update() {
+	// Spawn enemy
+	if (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - data->lastSpawnTime).count() > data->enemySpawnInterval) {
+		data->lastSpawnTime = std::chrono::system_clock::now();
+		std::uniform_int_distribution<int> dice(0, 25);
+		std::uniform_int_distribution<int> direction(0, 1);
+		std::uniform_int_distribution<int> height(80, 300);
+		auto result = dice(data->mt);
+		auto enemy = new Enemy;
+		enemy->moveToRight = direction(data->mt);
+		if (result <= 1) { // Spawn ufo
+			enemy->type = Enemy::Type::ufo;
+		} else if (2 <= result && result <= 13) { // Spawn heli
+			enemy->type = Enemy::Type::helicopter;
+		} else if (14 <= result) { // Spawn bomber
+			enemy->type = Enemy::Type::bomber;
+		}
+		if (!enemy->moveToRight) {
+			enemy->body.posX = 900;
+		} else {
+			enemy->body.posX = -100;
+		}
+		enemy->body.posY = height(data->mt);
+		data->enemyPool.push_back(enemy);
+		if (data->enemySpawnInterval > 500) {
+			data->enemySpawnInterval = static_cast<int>(data->enemySpawnInterval * 0.97);
+		}
+	}
+
+	// Update objects
 	for (auto const& bullet : data->bulletPool) {
 		bullet->update();
-		if ((1 > bullet->body.posX || bullet->body.posX > 801) ||
-	(1 > bullet->body.posY)) {
+		if ((1 > bullet->body.posX || bullet->body.posX > 801) || (1 > bullet->body.posY)) {
+			delete bullet;
+			data->bulletPool.erase(std::remove(data->bulletPool.begin(), data->bulletPool.end(), bullet), data->bulletPool.end());
+		}
+		if (bullet->tag == 1 && bullet->body.posY > 400) {
 			explosion(bullet->body);
 			delete bullet;
 			data->bulletPool.erase(std::remove(data->bulletPool.begin(), data->bulletPool.end(), bullet), data->bulletPool.end());
+			data->lives -= 1;
+			if (data->lives == 0) { fail(); }
 		}
 	}
 
@@ -159,10 +202,32 @@ void MainController::update() {
 		enemy->update();
 		for (auto const& bullet : data->bulletPool) {
 			if (enemy->body.isCollision(bullet->body)) {
+				switch (enemy->type) {
+					case Enemy::Type::ufo:
+						data->score += 10;
+						break;
+					case Enemy::Type::bomber:
+						data->score += 5;
+						break;
+					case Enemy::Type::helicopter:
+						data->score += 3;
+						break;
+				}
 				explosion(enemy->body);
 				delete enemy;
 				data->enemyPool.erase(std::remove(data->enemyPool.begin(), data->enemyPool.end(), enemy), data->enemyPool.end());
 			}
+		}
+		if (enemy->type == Enemy::Type::bomber && static_cast<int>(enemy->body.posX + 0.5) == 400) {
+			auto bomb = new EnemyBullet;
+			bomb->body.posX = 400;
+			bomb->body.posY = enemy->body.posY + 70;
+			bomb->tag = 1;
+			data->bulletPool.push_back(bomb);
+		}
+		if ((-100 > enemy->body.posX && !enemy->moveToRight) || (enemy->body.posX > 900 && enemy->moveToRight)) {
+			delete enemy;
+			data->enemyPool.erase(std::remove(data->enemyPool.begin(), data->enemyPool.end(), enemy), data->enemyPool.end());
 		}
 	}
 
@@ -176,9 +241,27 @@ void MainController::update() {
 }
 
 int MainController::run() {
+	data->awaiting = true;
+	updateDisplay();
+	SDL_Event event;
+	while (data->awaiting) {
+		while (SDL_PollEvent(&event) != 0) {
+			if (data->quit) break;
+			if (event.type == SDL_KEYDOWN) {
+				switch (event.key.keysym.sym) {
+				case SDLK_ESCAPE:
+					quit();
+					[[fallthrough]];
+				case SDLK_SPACE:
+					data->awaiting = false;
+					break;
+				}
+			}
+			SDL_Delay(1);
+		}
+	}
 	Inputter inputter{};
 	inputter.controller = this;
-	updateDisplay();
 	do {
 		inputter.update();
 		update();
@@ -235,7 +318,7 @@ void MainController::updateDisplay() {
 		SDL_Point playerCenter;
 		playerCenter.x = 100;
 		playerCenter.y = 120;
-		SDL_Texture *playerTexBuf = SDL_CreateTextureFromSurface(data->renderer, data->playerTex);
+		SDL_Texture *playerTexBuf = SDL_CreateTextureFromSurface(data->renderer, data->playerTex[(3 - data->lives == 3 ? 2 : 3 - data->lives)]);
 
 		SDL_RenderCopyEx(data->renderer, playerTexBuf, NULL, &playerRect, -data->rotation, &playerCenter, SDL_FLIP_NONE);
 
@@ -244,18 +327,24 @@ void MainController::updateDisplay() {
 
 	// Draw enemies
 	{
-		//SDL_Texture *enemy1TexBuf = SDL_CreateTextureFromSurface(data->renderer, data->enemy1Tex);
-		//SDL_Texture *enemy2TexBuf = SDL_CreateTextureFromSurface(data->renderer, data->enemy2Tex);
-		//SDL_Texture *enemy3TexBuf = SDL_CreateTextureFromSurface(data->renderer, data->enemy3Tex);
+		SDL_Texture *enemy1TexBuf = SDL_CreateTextureFromSurface(data->renderer, data->enemy1Tex);
+		SDL_Texture *enemy2TexBuf = SDL_CreateTextureFromSurface(data->renderer, data->enemy2Tex);
+		SDL_Texture *enemy3TexBuf = SDL_CreateTextureFromSurface(data->renderer, data->enemy3Tex);
 		for (auto const& enemy : data->enemyPool) {
+			SDL_Rect enemyRect;
+			enemyRect.x = enemy->body.posX - 50;
+			enemyRect.y = enemy->body.posY - 25;
+			enemyRect.w = 100;
+			enemyRect.h = 50;
 			switch (enemy->type) {
 			case Enemy::Type::helicopter:
-
+				SDL_RenderCopyEx(data->renderer, enemy1TexBuf, NULL, &enemyRect, 0.0, NULL, (enemy->moveToRight ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE));
 				break;
 			case Enemy::Type::bomber:
-
+				SDL_RenderCopyEx(data->renderer, enemy2TexBuf, NULL, &enemyRect, 0.0, NULL, (enemy->moveToRight ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE));
 				break;
 			case Enemy::Type::ufo:
+				SDL_RenderCopyEx(data->renderer, enemy3TexBuf, NULL, &enemyRect, 0.0, NULL, (enemy->moveToRight ? SDL_FLIP_HORIZONTAL : SDL_FLIP_NONE));
 				break;
 			}
 		}
@@ -263,8 +352,12 @@ void MainController::updateDisplay() {
 
 	// Draw bullets
 	{
-		SDL_SetRenderDrawColor(data->renderer, 238, 244, 66, 255);
 		for (auto const& bullet : data->bulletPool) {
+			if (bullet->tag == 1) {
+				SDL_SetRenderDrawColor(data->renderer, 255, 0, 127, 255);
+			} else {
+				SDL_SetRenderDrawColor(data->renderer, 238, 244, 66, 255);
+			}
 			SDL_Rect bulletRect;
 			bulletRect.x = bullet->body.posX;
 			bulletRect.y = bullet->body.posY;
@@ -274,7 +367,7 @@ void MainController::updateDisplay() {
 		}
 	}
 
-	// Draw explosion
+	// Draw explosions
 	{
 		for (auto const& explode : data->explodePool) {
 			SDL_Rect explodeRect;
@@ -293,21 +386,53 @@ void MainController::updateDisplay() {
 	// Draw socre
 	SDL_Color green = {0x00, 0xff, 0x00};
 	char const *text = ("Score: " + std::to_string(data->score)).c_str();
+	char const *text2 = ("High Score: " + std::to_string(data->highscore)).c_str();
 	SDL_Surface *scoreImage = TTF_RenderText_Solid(data->font, text, green);
 	SDL_Texture *scoreTex = SDL_CreateTextureFromSurface(data->renderer, scoreImage);
+	SDL_Surface *highscoreImage = TTF_RenderText_Solid(data->font, text2, green);
+	SDL_Texture *highscoreTex = SDL_CreateTextureFromSurface(data->renderer, highscoreImage);
 
 	SDL_Rect scoreViewRect;
 	scoreViewRect.x = 0;
 	scoreViewRect.y = 0;
 	scoreViewRect.w = 100;
 	scoreViewRect.h = 100;
+	SDL_Rect highscoreViewRect;
+	highscoreViewRect.x = 0;
+	highscoreViewRect.y = 25;
+	highscoreViewRect.w = 100;
+	highscoreViewRect.h = 100;
 
 	TTF_SizeText(data->font, text, &(scoreViewRect.w), &(scoreViewRect.h));
+	TTF_SizeText(data->font, text2, &(highscoreViewRect.w), &(highscoreViewRect.h));
 
 	SDL_RenderCopy(data->renderer, scoreTex, NULL, &scoreViewRect);
+	SDL_RenderCopy(data->renderer, highscoreTex, NULL, &highscoreViewRect);
 
 	SDL_DestroyTexture(scoreTex);
 	SDL_FreeSurface(scoreImage);
+	SDL_DestroyTexture(highscoreTex);
+	SDL_FreeSurface(highscoreImage);
+
+	if (data->awaiting) {
+		SDL_Color green = {0x00, 0xff, 0x00};
+		SDL_Surface *spriteImage1 = TTF_RenderText_Solid(data->font, "Press SPACE to start", green);
+		SDL_Texture *spriteTex1 = SDL_CreateTextureFromSurface(data->renderer, spriteImage1);
+
+		SDL_Rect spriteViewRect1;
+		spriteViewRect1.x = 280;
+		spriteViewRect1.y = 200;
+		spriteViewRect1.w = 5000;
+		spriteViewRect1.h = 5000;
+
+		TTF_SizeText(data->font, "Press SPACE to start", &(spriteViewRect1.w), &(spriteViewRect1.h));
+
+		SDL_RenderCopy(data->renderer, spriteTex1, NULL, &spriteViewRect1);
+
+		SDL_DestroyTexture(spriteTex1);
+		SDL_FreeSurface(spriteImage1);
+
+	}
 
 	SDL_GL_SwapWindow(data->window);
 
@@ -327,6 +452,12 @@ void MainController::rotateRight() {
 }
 
 void MainController::shoot() {
+	if (std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - data->lastShootTime).count() < 1) {
+		return;
+	}
+	data->isPressedSpace = true;
+	data->lastShootTime = std::chrono::system_clock::now();
+
 	auto shot = new MyBullet;
 	shot->body.posX = 400;
 	shot->body.posY = 520;
@@ -340,4 +471,8 @@ void MainController::explosion(struct Ridgebody const& body) {
 	explode->posX = static_cast<int>(body.posX);
 	explode->posY = static_cast<int>(body.posY);
 	data->explodePool.push_back(explode);
+}
+
+void MainController::releasedSpace() {
+	data->isPressedSpace = false;
 }

@@ -7,21 +7,29 @@
 #include <random>
 #include <vector>
 #include <cmath>
+#include <chrono>
 
 struct Data {
 public:
 	bool quit = false;
 	bool fail = false;
+	bool isPressedSpace = false;
+	bool awaiting = false;
+	std::chrono::system_clock::time_point lastShootTime;
+	std::chrono::system_clock::time_point lastSpawnTime;
+	int enemySpawnInterval = 3000;
 	double rotation = 0.0;
 	std::vector<struct Enemy*> enemyPool{};
 	std::vector<struct Bullet*> bulletPool{};
 	std::vector<struct Explode*> explodePool{};
 	unsigned int score = 0;
+	unsigned int highscore;
+	unsigned int lives = 3;
 
 	SDL_Window *window{};
 	SDL_GLContext context = NULL;
 	SDL_Renderer *renderer = nullptr;
-	SDL_Surface *playerTex = nullptr;
+	SDL_Surface *playerTex[3] = {};
 	SDL_Surface *enemy1Tex = nullptr;
 	SDL_Surface *enemy2Tex = nullptr;
 	SDL_Surface *enemy3Tex = nullptr;
@@ -37,15 +45,15 @@ public:
 
 struct Ridgebody {
 	double posX = 0, posY = 0;
-	int collisionRadius = 1;
 	bool isCollision(Ridgebody const& a) const {
-		return (std::sqrt(posX * posX + posY * posY) - std::sqrt(a.posX * a.posX + a.posY * a.posY)) <= 1;
+		using namespace std;
+		return (sqrt(pow(abs(posX - a.posX), 2) + pow(abs(posY - a.posY), 2))) <= 50;
 	}
 };
 
 struct Enemy {
 public:
-	Ridgebody body;
+	Ridgebody body{};
 	bool moveToRight = false;
 	enum struct Type {
 		helicopter,
@@ -54,12 +62,13 @@ public:
 	};
 	Type type = Type::helicopter;
 	void update() {
-		body.posX = (moveToRight ? 5 : -5);
+		body.posX += (moveToRight ? 1 : -1);
 	}
 };
 
 struct Bullet {
 	Ridgebody body;
+	int tag = 0;
 	virtual void update() = 0;
 	virtual ~Bullet() = default;
 };
@@ -77,7 +86,7 @@ public:
 
 struct EnemyBullet : Bullet {
 	void update() override {
-		Bullet::body.posY -= 2;
+		Bullet::body.posY += 2;
 	}
 	virtual ~EnemyBullet() = default;
 };

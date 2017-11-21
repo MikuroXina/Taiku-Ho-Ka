@@ -22,7 +22,17 @@ void Inputter::update() {
 				controller->rotateRight();
 				break;
 			case SDLK_SPACE:
-				controller->shoot();
+				if (!(controller->getData()->isPressedSpace)) {
+					controller->shoot();
+				}
+
+				break;
+			}
+		}
+		if (event.type == SDL_KEYUP) {
+			switch (event.key.keysym.sym) {
+			case SDLK_SPACE:
+				controller->releasedSpace();
 				break;
 			}
 		}

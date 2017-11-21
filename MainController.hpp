@@ -15,7 +15,7 @@ public:
 	MainController();
 	~MainController();
 
-	void init();
+	void init(unsigned int);
 	void update();
 	int run();
 
@@ -31,6 +31,7 @@ public:
 	void fail();
 	void explosion(struct Ridgebody const&);
 	void updateDisplay();
+	void releasedSpace();
 
 	Data const* getData() const { return data; }
 };
