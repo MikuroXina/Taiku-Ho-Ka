@@ -76,6 +76,9 @@ MainController::MainController() {
 	data->enemy1Tex = IMG_Load("Enemy1.png");
 	data->enemy2Tex = IMG_Load("Enemy2.png");
 	data->enemy3Tex = IMG_Load("Enemy3.png");
+	for (int i = 0; i < 11; i+=1) {
+		data->explodeTex[i] = IMG_Load(("explode" + std::to_string(i) + ".png").c_str());
+	}
 
 	// Setup sounds
 	sound.registerSound("Shoot.wav"); //   Id:0
@@ -89,6 +92,9 @@ MainController::~MainController() {
 	SDL_FreeSurface(data->enemy1Tex);
 	SDL_FreeSurface(data->enemy2Tex);
 	SDL_FreeSurface(data->enemy3Tex);
+	for (int i = 0; i < 11; i+=1) {
+		SDL_FreeSurface(data->explodeTex[i]);
+	}
 	SDL_DestroyRenderer(data->renderer);
 
 	SDL_GL_DeleteContext(data->context);
@@ -106,6 +112,9 @@ MainController::~MainController() {
 	for (auto const& obj : data->bulletPool) {
 		delete obj;
 	}
+	for (auto const& obj : data->explodePool) {
+		delete obj;
+	}
 
 	delete data;
 }
@@ -117,11 +126,16 @@ void MainController::init() {
 	for (auto const& obj : data->bulletPool) {
 		delete obj;
 	}
+	for (auto const& obj : data->explodePool) {
+		delete obj;
+	}
 
 	data->quit = false;
 	data->fail = false;
 	data->rotation = 0.0;
 	data->enemyPool = std::vector<struct Enemy*>();
+	data->bulletPool = std::vector<struct Bullet*>();
+	data->explodePool = std::vector<struct Explode*>();
 	data->score = 0;
 
 	// Delete events
@@ -135,6 +149,7 @@ void MainController::update() {
 		bullet->update();
 		if ((1 > bullet->body.posX || bullet->body.posX > 801) ||
 	(1 > bullet->body.posY)) {
+			explosion(bullet->body);
 			delete bullet;
 			data->bulletPool.erase(std::remove(data->bulletPool.begin(), data->bulletPool.end(), bullet), data->bulletPool.end());
 		}
@@ -146,7 +161,16 @@ void MainController::update() {
 			if (enemy->body.isCollision(bullet->body)) {
 				explosion(enemy->body);
 				delete enemy;
+				data->enemyPool.erase(std::remove(data->enemyPool.begin(), data->enemyPool.end(), enemy), data->enemyPool.end());
 			}
+		}
+	}
+
+	for (auto const& explode : data->explodePool) {
+		explode->subTexStep += 1;
+		if (explode->subTexStep >= 11) {
+			delete explode;
+			data->explodePool.erase(std::remove(data->explodePool.begin(), data->explodePool.end(), explode), data->explodePool.end());
 		}
 	}
 }
@@ -250,6 +274,22 @@ void MainController::updateDisplay() {
 		}
 	}
 
+	// Draw explosion
+	{
+		for (auto const& explode : data->explodePool) {
+			SDL_Rect explodeRect;
+			explodeRect.x = explode->posX - 37;
+			explodeRect.y = explode->posY - 37;
+			explodeRect.w = 75;
+			explodeRect.h = 75;
+			SDL_Texture *explodeTexBuf = SDL_CreateTextureFromSurface(data->renderer, data->explodeTex[explode->subTexStep]);
+
+			SDL_RenderCopy(data->renderer, explodeTexBuf, NULL, &explodeRect);
+
+			SDL_DestroyTexture(explodeTexBuf);
+		}
+	}
+
 	// Draw socre
 	SDL_Color green = {0x00, 0xff, 0x00};
 	char const *text = ("Score: " + std::to_string(data->score)).c_str();
@@ -287,8 +327,7 @@ void MainController::rotateRight() {
 }
 
 void MainController::shoot() {
-	static constexpr double pi = 3.141592653589793;
-	auto shot = new MyBullet();
+	auto shot = new MyBullet;
 	shot->body.posX = 400;
 	shot->body.posY = 520;
 	shot->rotate = -(90 + data->rotation) * M_PI / 180.0;
@@ -297,5 +336,8 @@ void MainController::shoot() {
 }
 
 void MainController::explosion(struct Ridgebody const& body) {
-
+	auto explode = new Explode;
+	explode->posX = static_cast<int>(body.posX);
+	explode->posY = static_cast<int>(body.posY);
+	data->explodePool.push_back(explode);
 }

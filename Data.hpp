@@ -15,6 +15,7 @@ public:
 	double rotation = 0.0;
 	std::vector<struct Enemy*> enemyPool{};
 	std::vector<struct Bullet*> bulletPool{};
+	std::vector<struct Explode*> explodePool{};
 	unsigned int score = 0;
 
 	SDL_Window *window{};
@@ -24,6 +25,7 @@ public:
 	SDL_Surface *enemy1Tex = nullptr;
 	SDL_Surface *enemy2Tex = nullptr;
 	SDL_Surface *enemy3Tex = nullptr;
+	SDL_Surface *explodeTex[11] = {};
 
 	TTF_Font *font;
 
@@ -42,8 +44,6 @@ struct Ridgebody {
 };
 
 struct Enemy {
-private:
-	unsigned int elapsedTime = 0;
 public:
 	Ridgebody body;
 	bool moveToRight = false;
@@ -77,7 +77,12 @@ public:
 
 struct EnemyBullet : Bullet {
 	void update() override {
-		Bullet::body.posX -= 2;
+		Bullet::body.posY -= 2;
 	}
 	virtual ~EnemyBullet() = default;
+};
+
+struct Explode {
+	int posX = 0, posY = 0;
+	int subTexStep = 0;
 };
