@@ -191,6 +191,7 @@ void MainController::update() {
 		}
 		if (bullet->tag == 1 && bullet->body.posY > 400) {
 			explosion(bullet->body);
+			sound.playSound(1);
 			delete bullet;
 			data->bulletPool.erase(std::remove(data->bulletPool.begin(), data->bulletPool.end(), bullet), data->bulletPool.end());
 			data->lives -= 1;
@@ -214,6 +215,8 @@ void MainController::update() {
 						break;
 				}
 				explosion(enemy->body);
+				sound.playSound(1);
+				sound.playSound(2);
 				delete enemy;
 				data->enemyPool.erase(std::remove(data->enemyPool.begin(), data->enemyPool.end(), enemy), data->enemyPool.end());
 			}
@@ -464,6 +467,8 @@ void MainController::shoot() {
 	shot->rotate = -(90 + data->rotation) * M_PI / 180.0;
 	shot->speed = 0.1;
 	data->bulletPool.push_back(shot);
+
+	sound.playSound(0);
 }
 
 void MainController::explosion(struct Ridgebody const& body) {
