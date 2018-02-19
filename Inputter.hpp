@@ -1,10 +1,11 @@
-#include <SDL.h>
+#include <SDL2/SDL.h>
 
 class Inputter {
 private:
-	SDL_Event event;
+  SDL_Event event;
+
 public:
-	class MainController *controller;
-	
-	void update();
+  class MainController *controller;
+
+  void update();
 };

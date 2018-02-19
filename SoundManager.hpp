@@ -1,14 +1,14 @@
-#include <SDL_mixer.h>
+#include <SDL2/SDL_mixer.h>
 
 class SoundManager {
 private:
-	Mix_Chunk *chunks[4]{};
-	int loadedCount=0;
+  Mix_Chunk *chunks[4]{};
+  int loadedCount = 0;
 
 public:
-	SoundManager();
-	~SoundManager();
+  SoundManager();
+  ~SoundManager();
 
-	int registerSound(char const*);
-	void playSound(int);
+  int registerSound(char const *);
+  void playSound(int);
 };
