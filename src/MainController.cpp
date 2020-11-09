@@ -1,10 +1,9 @@
+#include <SDL2/SDL_image.h>
+#include <SDL2/SDL_ttf.h>
+#include <freetype2/freetype/freetype.h>
 #include <freetype2/ft2build.h>
 #include <iostream>
 #include <random>
-
-#include FT_FREETYPE_H
-#include <SDL2/SDL_image.h>
-#include <SDL2/SDL_ttf.h>
 
 #include "Data.hpp"
 #include "Inputter.hpp"

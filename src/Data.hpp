@@ -1,10 +1,9 @@
 #include <OpenGL/gl.h>
-#include <freetype2/ft2build.h>
-#include FT_FREETYPE_H
 #include <SDL2/SDL_ttf.h>
-
 #include <chrono>
 #include <cmath>
+#include <freetype2/freetype/freetype.h>
+#include <freetype2/ft2build.h>
 #include <random>
 #include <vector>
 
