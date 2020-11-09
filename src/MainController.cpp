@@ -3,6 +3,7 @@
 #include <freetype2/freetype/freetype.h>
 #include <freetype2/ft2build.h>
 #include <iostream>
+#include <memory>
 #include <random>
 
 #include "Data.hpp"
@@ -22,9 +23,7 @@ int MainController::getRandomEnemyType() {
   return dice(data->mt);
 }
 
-MainController::MainController() {
-  data = new Data;
-
+MainController::MainController() : data(new Data) {
   if (SDL_Init(SDL_INIT_EVERYTHING) != 0) {
     std::cout << std::string(SDL_GetError()) << std::endl;
   }
@@ -113,40 +112,18 @@ MainController::~MainController() {
 
   TTF_Quit();
   SDL_Quit();
-
-  for (auto const &obj : data->enemyPool) {
-    delete obj;
-  }
-  for (auto const &obj : data->bulletPool) {
-    delete obj;
-  }
-  for (auto const &obj : data->explodePool) {
-    delete obj;
-  }
-
-  delete data;
 }
 
 void MainController::init(unsigned int highscore) {
-  for (auto const &obj : data->enemyPool) {
-    delete obj;
-  }
-  for (auto const &obj : data->bulletPool) {
-    delete obj;
-  }
-  for (auto const &obj : data->explodePool) {
-    delete obj;
-  }
-
   data->quit = false;
   data->fail = false;
   data->lastShootTime = std::chrono::system_clock::now();
   data->lastSpawnTime = std::chrono::system_clock::now();
   data->enemySpawnInterval = 5000;
   data->rotation = 0.0;
-  data->enemyPool = std::vector<struct Enemy *>();
-  data->bulletPool = std::vector<struct Bullet *>();
-  data->explodePool = std::vector<struct Explode *>();
+  data->enemyPool.clear();
+  data->bulletPool.clear();
+  data->explodePool.clear();
   data->score = 0;
   data->highscore = highscore;
   data->lives = 3;
@@ -167,7 +144,7 @@ void MainController::update() {
     std::uniform_int_distribution<int> direction(0, 1);
     std::uniform_int_distribution<int> height(80, 300);
     auto result = dice(data->mt);
-    auto enemy = new Enemy;
+    auto enemy = std::make_unique<Enemy>();
     enemy->moveToRight = direction(data->mt);
     if (result <= 1) { // Spawn ufo
       enemy->type = Enemy::Type::ufo;
@@ -182,7 +159,7 @@ void MainController::update() {
       enemy->body.posX = -100;
     }
     enemy->body.posY = height(data->mt);
-    data->enemyPool.push_back(enemy);
+    data->enemyPool.push_back(std::move(enemy));
     if (data->enemySpawnInterval > 500) {
       data->enemySpawnInterval =
           static_cast<int>(data->enemySpawnInterval * 0.97);
@@ -190,28 +167,27 @@ void MainController::update() {
   }
 
   // Update objects
-  for (auto const &bullet : data->bulletPool) {
+  for (auto &bullet : data->bulletPool) {
     bullet->update();
     if ((1 > bullet->body.posX || bullet->body.posX > 801) ||
         (1 > bullet->body.posY)) {
-      delete bullet;
-      data->bulletPool.erase(
-          std::remove(data->bulletPool.begin(), data->bulletPool.end(), bullet),
-          data->bulletPool.end());
+      bullet->willDestroy = true;
     }
     if (bullet->tag == 1 && bullet->body.posY > 400) {
       explosion(bullet->body);
       sound.playSound(1);
-      delete bullet;
-      data->bulletPool.erase(
-          std::remove(data->bulletPool.begin(), data->bulletPool.end(), bullet),
-          data->bulletPool.end());
+      bullet->willDestroy = true;
       data->lives -= 1;
       if (data->lives == 0) {
         fail();
       }
     }
   }
+  auto &bullets = data->bulletPool;
+  bullets.erase(
+      std::remove_if(bullets.begin(), bullets.end(),
+                     [](auto const &bullet) { return bullet->willDestroy; }),
+      bullets.end());
 
   for (auto &enemy : data->enemyPool) {
     enemy->update();
@@ -231,38 +207,39 @@ void MainController::update() {
         explosion(enemy->body);
         sound.playSound(1);
         sound.playSound(2);
-        delete enemy;
-        data->enemyPool.erase(
-            std::remove(data->enemyPool.begin(), data->enemyPool.end(), enemy),
-            data->enemyPool.end());
+        enemy->willDestroy = true;
       }
     }
     if (enemy->type == Enemy::Type::bomber &&
         static_cast<int>(enemy->body.posX + 0.5) == 400) {
-      auto bomb = new EnemyBullet;
+      auto bomb = std::make_unique<EnemyBullet>();
       bomb->body.posX = 400;
       bomb->body.posY = enemy->body.posY + 70;
       bomb->tag = 1;
-      data->bulletPool.push_back(bomb);
+      data->bulletPool.push_back(std::move(bomb));
     }
     if ((-100 > enemy->body.posX && !enemy->moveToRight) ||
         (enemy->body.posX > 900 && enemy->moveToRight)) {
-      delete enemy;
-      data->enemyPool.erase(
-          std::remove(data->enemyPool.begin(), data->enemyPool.end(), enemy),
-          data->enemyPool.end());
+      enemy->willDestroy = true;
     }
   }
+  auto &enemies = data->enemyPool;
+  enemies.erase(
+      std::remove_if(enemies.begin(), enemies.end(),
+                     [](auto const &enemy) { return enemy->willDestroy; }),
+      enemies.end());
 
-  for (auto const &explode : data->explodePool) {
+  for (auto &explode : data->explodePool) {
     explode->subTexStep += 1;
     if (explode->subTexStep >= 11) {
-      delete explode;
-      data->explodePool.erase(std::remove(data->explodePool.begin(),
-                                          data->explodePool.end(), explode),
-                              data->explodePool.end());
+      explode->willDestroy = true;
     }
   }
+  auto &explodes = data->explodePool;
+  explodes.erase(
+      std::remove_if(explodes.begin(), explodes.end(),
+                     [](auto const &explode) { return explode->willDestroy; }),
+      explodes.end());
 }
 
 int MainController::run() {
@@ -506,21 +483,21 @@ void MainController::shoot() {
   data->isPressedSpace = true;
   data->lastShootTime = std::chrono::system_clock::now();
 
-  auto shot = new MyBullet;
+  auto shot = std::make_unique<MyBullet>();
   shot->body.posX = 400;
   shot->body.posY = 520;
   shot->rotate = -(90 + data->rotation) * M_PI / 180.0;
   shot->speed = 0.1;
-  data->bulletPool.push_back(shot);
+  data->bulletPool.push_back(std::move(shot));
 
   sound.playSound(0);
 }
 
 void MainController::explosion(struct Ridgebody const &body) {
-  auto explode = new Explode;
+  auto explode = std::make_unique<Explode>();
   explode->posX = static_cast<int>(body.posX);
   explode->posY = static_cast<int>(body.posY);
-  data->explodePool.push_back(explode);
+  data->explodePool.push_back(std::move(explode));
 }
 
 void MainController::releasedSpace() { data->isPressedSpace = false; }

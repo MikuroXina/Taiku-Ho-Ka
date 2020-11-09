@@ -60,12 +60,14 @@ public:
     ufo,
   };
   Type type = Type::helicopter;
+  bool willDestroy = false;
   void update() { body.posX += (moveToRight ? 1 : -1); }
 };
 
 struct Bullet {
   Ridgebody body;
   int tag = 0;
+  bool willDestroy = false;
   virtual void update() = 0;
   virtual ~Bullet() = default;
 };
@@ -89,4 +91,5 @@ struct EnemyBullet : Bullet {
 struct Explode {
   int posX = 0, posY = 0;
   int subTexStep = 0;
+  bool willDestroy = false;
 };

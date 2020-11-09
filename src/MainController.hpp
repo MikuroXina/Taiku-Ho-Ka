@@ -6,7 +6,7 @@ struct Data;
 
 class MainController {
 private:
-  Data *data;
+  std::unique_ptr<Data> data;
   SoundManager sound{};
 
   void checkSDLError();
@@ -34,5 +34,5 @@ public:
   void updateDisplay();
   void releasedSpace();
 
-  Data const *getData() const { return data; }
+  Data const *getData() const { return data.get(); }
 };
