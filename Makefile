@@ -6,7 +6,7 @@ else
   LDFLAGS = -v
 endif
 LIBS      = /usr/local/lib/libftgl.a /usr/local/lib/libfreetype.a /usr/local/lib/libpng.a /usr/local/lib/libSDL2.dylib /System/Library/Frameworks/OpenGL.framework/Libraries/libGL.dylib /usr/local/Cellar/zlib/1.2.11/lib/libz.a  /usr/local/opt/bzip2/lib/libbz2.a /usr/local/lib/libSDL2_ttf.a /usr/local/lib/libSDL2_image.dylib /usr/local/lib/libSDL2_mixer.dylib
-INCLUDE   = -I/usr/local/include
+INCLUDE   = -I/usr/local/include -I/usr/local/include/freetype2
 TARGET    = ./a.out
 SRCDIR    = ./src
 ifeq "$(strip $(SRCDIR))" ""
