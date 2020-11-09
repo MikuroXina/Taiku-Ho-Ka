@@ -405,13 +405,14 @@ void MainController::updateDisplay() {
 
   // Draw socre
   SDL_Color green = {0x00, 0xff, 0x00};
-  char const *text = ("Score: " + std::to_string(data->score)).c_str();
-  char const *text2 =
-      ("High Score: " + std::to_string(data->highscore)).c_str();
-  SDL_Surface *scoreImage = TTF_RenderText_Solid(data->font, text, green);
+  auto scoreText = "Score: " + std::to_string(data->score);
+  auto highScoreText = "High Score: " + std::to_string(data->highscore);
+  SDL_Surface *scoreImage =
+      TTF_RenderText_Solid(data->font, scoreText.c_str(), green);
   SDL_Texture *scoreTex =
       SDL_CreateTextureFromSurface(data->renderer, scoreImage);
-  SDL_Surface *highscoreImage = TTF_RenderText_Solid(data->font, text2, green);
+  SDL_Surface *highscoreImage =
+      TTF_RenderText_Solid(data->font, highScoreText.c_str(), green);
   SDL_Texture *highscoreTex =
       SDL_CreateTextureFromSurface(data->renderer, highscoreImage);
 
@@ -426,8 +427,9 @@ void MainController::updateDisplay() {
   highscoreViewRect.w = 100;
   highscoreViewRect.h = 100;
 
-  TTF_SizeText(data->font, text, &(scoreViewRect.w), &(scoreViewRect.h));
-  TTF_SizeText(data->font, text2, &(highscoreViewRect.w),
+  TTF_SizeText(data->font, scoreText.c_str(), &(scoreViewRect.w),
+               &(scoreViewRect.h));
+  TTF_SizeText(data->font, highScoreText.c_str(), &(highscoreViewRect.w),
                &(highscoreViewRect.h));
 
   SDL_RenderCopy(data->renderer, scoreTex, NULL, &scoreViewRect);
