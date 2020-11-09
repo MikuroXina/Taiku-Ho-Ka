@@ -1,14 +1,14 @@
 COMPILER  = clang++
-CFLAGS    = -std=c++14 -g -O3 -Wall -Wextra -Winit-self -Wno-missing-field-initializers
+CFLAGS    = -std=c++17 -g -O3 -Wall -Wextra -Winit-self -Wno-missing-field-initializers
 ifeq "$(shell getconf LONG_BIT)" "64"
   LDFLAGS = -v
 else
   LDFLAGS = -v
 endif
-LIBS      = /usr/local/Cellar/ftgl/2.1.3-rc5/lib/libftgl.a /usr/local/opt/freetype/lib/libfreetype.a /usr/local/opt/libpng/lib/libpng.a /usr/local/opt/sdl2/lib/libSDL2.dylib /System/Library/Frameworks/OpenGL.framework/Libraries/libGL.dylib /usr/local/Cellar/zlib/1.2.11/lib/libz.a  /usr/local/opt/bzip2/lib/libbz2.a /usr/local/opt/sdl2_ttf/lib/libSDL2_ttf.a /usr/local/opt/sdl2_image/lib/libSDL2_image.dylib /usr/local/opt/sdl2_mixer/lib/libSDL2_mixer.dylib
-INCLUDE   = -framework SDL2 -framework Cocoa -I/usr/local/include/freetype2
-TARGET    = ./bin.out
-SRCDIR    = ./
+LIBS      = /usr/local/lib/libftgl.a /usr/local/lib/libfreetype.a /usr/local/lib/libpng.a /usr/local/lib/libSDL2.dylib /System/Library/Frameworks/OpenGL.framework/Libraries/libGL.dylib /usr/local/Cellar/zlib/1.2.11/lib/libz.a  /usr/local/opt/bzip2/lib/libbz2.a /usr/local/lib/libSDL2_ttf.a /usr/local/lib/libSDL2_image.dylib /usr/local/lib/libSDL2_mixer.dylib
+INCLUDE   = -I/usr/local/include
+TARGET    = ./a.out
+SRCDIR    = ./src
 ifeq "$(strip $(SRCDIR))" ""
   SRCDIR  = .
 endif
