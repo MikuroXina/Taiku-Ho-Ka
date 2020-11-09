@@ -31,18 +31,17 @@ MainController::MainController() : data(new Data) {
   TTF_Init();
   IMG_Init(IMG_INIT_PNG);
 
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 2);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 1);
-  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
   constexpr Uint32 width = 800;
   constexpr Uint32 height = 500;
-  data->window = SDL_CreateWindow("たいくーほーか", SDL_WINDOWPOS_CENTERED,
-                                  SDL_WINDOWPOS_CENTERED, width, height,
-                                  SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN);
+  data->window =
+      SDL_CreateWindow("たいくーほーか", SDL_WINDOWPOS_CENTERED,
+                       SDL_WINDOWPOS_CENTERED, width, height, SDL_WINDOW_SHOWN);
   if (!(data->window)) {
     std::cout << "Unable to create a window!" << std::endl;
   }
@@ -72,6 +71,10 @@ MainController::MainController() : data(new Data) {
 
   data->renderer =
       SDL_CreateRenderer(data->window, -1, SDL_RENDERER_PRESENTVSYNC);
+
+  SDL_SetRenderDrawColor(data->renderer, 0, 255, 255, 255);
+  SDL_RenderClear(data->renderer);
+  SDL_RenderPresent(data->renderer);
 
   // Setup texture
   data->playerTex[0] = IMG_Load("assets/images/Player.png");
@@ -457,7 +460,7 @@ void MainController::updateDisplay() {
     SDL_FreeSurface(spriteImage1);
   }
 
-  SDL_GL_SwapWindow(data->window);
+  SDL_RenderPresent(data->renderer);
 
   SDL_Delay(1);
 }
