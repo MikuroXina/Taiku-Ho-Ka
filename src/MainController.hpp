@@ -30,7 +30,7 @@ public:
   // Other events
   void quit();
   void fail();
-  void explosion(struct Ridgebody const &);
+  void explosion(struct Rigidbody const &);
   void updateDisplay();
   void releasedSpace();
 

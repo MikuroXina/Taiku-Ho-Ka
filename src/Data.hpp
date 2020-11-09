@@ -41,9 +41,9 @@ public:
   Data() : mt(rd()) { ; }
 };
 
-struct Ridgebody {
+struct Rigidbody {
   double posX = 0, posY = 0;
-  bool isCollision(Ridgebody const &a) const {
+  bool isCollision(Rigidbody const &a) const {
     using namespace std;
     return (sqrt(pow(abs(posX - a.posX), 2) + pow(abs(posY - a.posY), 2))) <=
            50;
@@ -52,7 +52,7 @@ struct Ridgebody {
 
 struct Enemy {
 public:
-  Ridgebody body{};
+  Rigidbody body{};
   bool moveToRight = false;
   enum struct Type {
     helicopter,
@@ -65,7 +65,7 @@ public:
 };
 
 struct Bullet {
-  Ridgebody body;
+  Rigidbody body;
   int tag = 0;
   bool willDestroy = false;
   virtual void update() = 0;

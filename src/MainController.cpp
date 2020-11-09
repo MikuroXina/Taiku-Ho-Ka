@@ -496,7 +496,7 @@ void MainController::shoot() {
   sound.playSound(0);
 }
 
-void MainController::explosion(struct Ridgebody const &body) {
+void MainController::explosion(struct Rigidbody const &body) {
   auto explode = std::make_unique<Explode>();
   explode->posX = static_cast<int>(body.posX);
   explode->posY = static_cast<int>(body.posY);
