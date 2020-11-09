@@ -18,9 +18,9 @@ public:
   std::chrono::system_clock::time_point lastSpawnTime;
   int enemySpawnInterval = 3000;
   double rotation = 0.0;
-  std::vector<struct Enemy *> enemyPool{};
-  std::vector<struct Bullet *> bulletPool{};
-  std::vector<struct Explode *> explodePool{};
+  std::vector<std::unique_ptr<struct Enemy>> enemyPool{};
+  std::vector<std::unique_ptr<struct Bullet>> bulletPool{};
+  std::vector<std::unique_ptr<struct Explode>> explodePool{};
   unsigned int score = 0;
   unsigned int highscore;
   unsigned int lives = 3;
